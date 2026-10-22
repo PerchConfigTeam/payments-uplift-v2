@@ -1,0 +1,39 @@
+<!--
+  ACI opt-out form: embed code for the website host.
+  Paste this where the form should appear (e.g. on https://www.aciuk.co.uk/opt-out).
+  Replace FORM_ORIGIN with the address the form is deployed to.
+
+  - The customer's link to the host page carries ?FCCID=..., which is passed into the iframe.
+  - The iframe reports its height so it never shows an inner scrollbar.
+  - After a successful opt-out the iframe asks this page to go to the Income & Expenditure form.
+-->
+<iframe id="aci-optout-frame"
+        title="Opt out of your payment change"
+        style="width: 100%; height: 640px; border: 0; display: block;"
+        loading="eager"></iframe>
+<script>
+(function () {
+  var FORM_ORIGIN = 'https://optout.example.com'; // <-- replace with the deployed form's origin
+  var IE_FORM_PREFIX = 'https://www.aciuk.co.uk/form-dd-ie';
+
+  var frame = document.getElementById('aci-optout-frame');
+  var params = new URLSearchParams(location.search);
+  var fccid = params.get('FCCID') || params.get('fccid') || '';
+
+  var src = new URL('/', FORM_ORIGIN);
+  if (fccid) src.searchParams.set('FCCID', fccid);
+  frame.src = src.toString();
+
+  window.addEventListener('message', function (e) {
+    if (e.origin !== FORM_ORIGIN || e.source !== frame.contentWindow || !e.data) return;
+    if (e.data.type === 'aci-optout:height' && typeof e.data.height === 'number') {
+      frame.style.height = Math.ceil(e.data.height) + 'px';
+    }
+    // Only follow redirects to the Income & Expenditure form.
+    if (e.data.type === 'aci-optout:redirect' && typeof e.data.url === 'string' &&
+        e.data.url.indexOf(IE_FORM_PREFIX) === 0) {
+      location.href = e.data.url;
+    }
+  });
+})();
+</script>

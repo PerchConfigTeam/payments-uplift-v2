@@ -1,0 +1,159 @@
+/*
+ * ACI theme for the embeddable opt-out form (loaded inside an iframe).
+ * Values copied from https://www.aciuk.co.uk/wp-content/themes/aci/style.css?v=2.11
+ * Breakpoints are the live theme's mobile one (660px), measured against the iframe width.
+ */
+
+:root {
+  /* Colour */
+  --aci-blue: #2195dc;        /* links, buttons */
+  --aci-blue-bright: #0096dc; /* card headings */
+  --aci-blue-dark: #085a8c;   /* button hover */
+  --aci-sky: #cce9f6;         /* info panels */
+  --aci-border: #cccccc;      /* form fields */
+  --aci-border-focus: #a0a0a0;
+  --aci-error: #cc0000;
+  --aci-white: #ffffff;
+  --aci-black: #000000;
+
+  /* Type */
+  --aci-font-body: 'Space Grotesk', sans-serif;
+  --aci-font-head: 'Nunito', sans-serif;
+
+  /* Shape */
+  --aci-radius: 5px;
+  --aci-shadow: 0 0 30px 0 rgb(0 0 0 / 20%);
+  --aci-shadow-field: 0 0 10px #dddddd;
+}
+
+/* ---------- Base ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  color: var(--aci-black);
+  background-color: transparent; /* blend into the host page */
+  font-family: var(--aci-font-body);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 160%;
+  text-rendering: optimizeLegibility;
+}
+
+@media screen and (max-width: 659px) {
+  body { font-size: 15px; }
+}
+
+h1, h2, h3, h4, p { margin: 0; }
+
+a:link, a:visited, a:active, a:hover { color: var(--aci-blue); }
+
+/* The live theme removes focus outlines; we keep a visible one for keyboard users. */
+:focus-visible { outline: 3px solid var(--aci-blue); outline-offset: 2px; }
+[tabindex="-1"]:focus { outline: none; } /* headings focused by script for screen readers */
+
+/* ---------- Layout ---------- */
+
+/* Padding leaves room for the card shadow so the iframe edge doesn't clip it. */
+.embed { max-width: 720px; margin: 0 auto; padding: 30px; }
+.embed > * + * { margin-top: 30px; }
+.embed h3 {
+  font-family: var(--aci-font-head);
+  font-weight: 600;
+  font-size: 1.6em;
+  line-height: 120%;
+  margin: 0 0 20px;
+}
+.embed p + p { margin-top: 1em; }
+
+@media screen and (max-width: 659px) {
+  .embed { padding: 20px 15px; }
+}
+
+/* White card: same treatment as .paymentCarousel .item / .checker on the live site */
+.card {
+  background-color: var(--aci-white);
+  border-radius: var(--aci-radius);
+  box-shadow: var(--aci-shadow);
+  padding: 40px;
+}
+.card h3 { color: var(--aci-blue-bright); }
+@media screen and (max-width: 659px) { .card { padding: 25px 20px; } }
+
+/* Pale blue panel: same treatment as .comment on the live site */
+.notice {
+  background-color: var(--aci-sky);
+  border-radius: var(--aci-radius);
+  padding: 20px;
+  margin: 0 0 30px;
+}
+.demo-note { margin: 0; text-align: center; }
+
+/* ---------- Buttons ---------- */
+
+.tyButton {
+  display: inline-block;
+  border-radius: var(--aci-radius);
+  font-family: var(--aci-font-body);
+  font-size: 1em;
+  line-height: 160%;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.3s;
+}
+a.tyButton:link, a.tyButton:visited, button.tyButton {
+  background-color: transparent;
+  color: var(--aci-blue);
+  border: 2px solid var(--aci-blue);
+  padding: 13px 20px 11px;
+}
+a.tyButton:hover, button.tyButton:hover { background-color: var(--aci-blue); color: var(--aci-white); }
+
+button.tyButton:disabled { background-color: var(--aci-border); border-color: var(--aci-border); color: var(--aci-white); cursor: wait; }
+
+/* ---------- Forms (mirrors .aci-form1) ---------- */
+
+.aci-form1 { margin: 30px 0 20px; }
+.aci-form1 label { display: block; margin: 0 0 20px; }
+.aci-form1 .label-text { display: block; font-weight: 700; margin: 0 0 4px; }
+.aci-form1 .ff-req { color: #ff0000; }
+.aci-form1 .ff-info { display: block; margin: 0 0 8px; font-size: 14px; }
+
+.aci-form1 select {
+  font-family: var(--aci-font-head);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 140%;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 8px 40px 8px 8px;
+  color: var(--aci-black);
+  background-color: var(--aci-white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%232195dc' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  border: 2px solid var(--aci-border);
+  border-radius: var(--aci-radius);
+  box-shadow: var(--aci-shadow-field);
+  cursor: pointer;
+}
+.aci-form1 select:focus { border-color: var(--aci-border-focus); }
+.aci-form1 select.form-error { border-color: var(--aci-error); }
+.aci-form1 .form-error-msg {
+  display: block; margin: 6px 0 0; color: var(--aci-error); font-weight: 700; font-size: 0.8em;
+}
+.aci-form1 .form-actions { display: flex; justify-content: flex-end; }
+
+@media screen and (max-width: 659px) {
+  .aci-form1 .ff-info { font-size: 12px; }
+  .aci-form1 .form-actions .tyButton { width: 100%; }
+}
+
+/* ---------- Utilities ---------- */
+
+[hidden] { display: none !important; }

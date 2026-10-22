@@ -2,50 +2,37 @@
   'use strict';
 
   // ---- Config -----------------------------------------------------------
-  // Point API_OPTOUT at the real endpoint. While DEMO is true no network calls are made.
-  const API_OPTOUT = '/api/opt-out'; // POST { fccid, reason }
-  const DEMO = true;
+  // Same-origin proxy (api/src/functions/optOut.js) that adds the API key server-side.
+  // The key is never in this file or sent to the browser.
+  const API_OPTOUT = '/api/opt-out'; // POST { FCCID, Reason }
+  // While DEMO is true no network calls are made.
+  const DEMO = false;
   const REDIRECT_DELAY_MS = 2500;
+  const REQUEST_TIMEOUT_MS = 15000;
   // Existing ACI Income & Expenditure (Budget Calculator) form. Set to null to skip the redirect.
   const IE_FORM_URL = 'https://www.aciuk.co.uk/form-dd-ie';
+  // Origin of the page that embeds this form. Messages to the parent (height, redirect) only go here.
+  const PARENT_ORIGIN = 'https://www.aciuk.co.uk';
 
   const params = new URLSearchParams(location.search);
   const FCCID = params.get('FCCID') || params.get('fccid') || '';
 
   const $ = (id) => document.getElementById(id);
+  const embedded = window.parent !== window;
 
-  // ---- Header + slide-down panels ---------------------------------------
-  const header = $('header');
-  const overlay = $('overlay');
-  let openPanel = null;
-
-  function setPanel(panel) {
-    if (openPanel) {
-      openPanel.classList.remove('is-open');
-      document.querySelector('[aria-controls="' + openPanel.id + '"]').setAttribute('aria-expanded', 'false');
-    }
-    openPanel = panel;
-    overlay.classList.toggle('is-open', !!panel);
-    if (panel) {
-      panel.classList.add('is-open');
-      document.querySelector('[aria-controls="' + panel.id + '"]').setAttribute('aria-expanded', 'true');
-      panel.querySelector('a, button').focus();
-    }
+  function postToParent(message) {
+    if (embedded) window.parent.postMessage(message, PARENT_ORIGIN);
   }
 
-  document.querySelectorAll('[data-open]').forEach((btn) => {
-    btn.addEventListener('click', () => setPanel($(btn.dataset.open)));
-  });
-  document.querySelectorAll('[data-close]').forEach((btn) => {
-    btn.addEventListener('click', () => setPanel(null));
-  });
-  overlay.addEventListener('click', () => setPanel(null));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openPanel) setPanel(null); });
+  // ---- Iframe auto-height -----------------------------------------------
+  // The host page listens for this and sets the iframe height, so there is no inner scrollbar.
+  function sendHeight() {
+    postToParent({ type: 'aci-optout:height', height: document.documentElement.scrollHeight });
+  }
+  new ResizeObserver(sendHeight).observe(document.body);
+  window.addEventListener('load', sendHeight);
 
-  // The dev banner pushes the floating header down; snap it back once the banner scrolls away.
-  window.addEventListener('scroll', () => {
-    header.classList.toggle('is-scrolled', window.scrollY > 48);
-  }, { passive: true });
+  $('demo-note').hidden = !DEMO;
 
   // ---- Opt-out form -------------------------------------------------------
   const form = $('optout-form');
@@ -53,6 +40,12 @@
   const reasonErr = $('reason-err');
   const submitErr = $('submit-err');
   const button = $('btn-optout');
+
+  if (!FCCID) {
+    $('view-form').hidden = true;
+    $('view-nolink').hidden = false;
+    return;
+  }
 
   function setReasonError(on) {
     select.classList.toggle('form-error', on);
@@ -67,7 +60,8 @@
     const res = await fetch(API_OPTOUT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fccid: FCCID, reason: reason }),
+      body: JSON.stringify({ FCCID: FCCID, Reason: reason }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json().catch(() => ({ ok: true }));
@@ -86,13 +80,24 @@
     return url.toString();
   }
 
+  // The redirect must move the whole host page, not just the iframe.
+  // Ask the host page to do it; if this page isn't embedded, navigate directly.
+  function redirectTop(url) {
+    if (embedded) {
+      postToParent({ type: 'aci-optout:redirect', url: url });
+    } else {
+      location.href = url;
+    }
+  }
+
   function showDone(redirectUrl) {
     $('view-form').hidden = true;
     $('view-done').hidden = false;
-    $('done-title').focus();
+    $('done-title').focus({ preventScroll: true });
     if (redirectUrl) {
+      $('redirect-link').href = redirectUrl;
       $('redirect-msg').hidden = false;
-      setTimeout(() => { location.href = redirectUrl; }, REDIRECT_DELAY_MS);
+      setTimeout(() => redirectTop(redirectUrl), REDIRECT_DELAY_MS);
     }
   }
 

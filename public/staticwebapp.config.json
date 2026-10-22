@@ -1,0 +1,10 @@
+{
+  "platform": {
+    "apiRuntime": "node:20"
+  },
+  "globalHeaders": {
+    "Content-Security-Policy": "frame-ancestors https://www.aciuk.co.uk",
+    "Referrer-Policy": "strict-origin",
+    "X-Content-Type-Options": "nosniff"
+  }
+}
