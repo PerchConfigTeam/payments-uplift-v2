@@ -2,35 +2,22 @@
   'use strict';
 
   // ---- Config -----------------------------------------------------------
-  // Same-origin proxy (api/src/functions/optOut.js) that adds the API key server-side.
+  // PHP proxy (api/opt-out.php) that adds the API key server-side.
   // The key is never in this file or sent to the browser.
-  const API_OPTOUT = '/api/opt-out'; // POST { FCCID, Reason }
+  const API_OPTOUT = 'api/opt-out.php'; // POST { FCCID, Reason }
   // While DEMO is true no network calls are made.
   const DEMO = false;
   const REDIRECT_DELAY_MS = 2500;
   const REQUEST_TIMEOUT_MS = 15000;
   // Existing ACI Income & Expenditure (Budget Calculator) form. Set to null to skip the redirect.
   const IE_FORM_URL = 'https://www.aciuk.co.uk/form-dd-ie';
-  // Origin of the page that embeds this form. Messages to the parent (height, redirect) only go here.
-  const PARENT_ORIGIN = 'https://www.aciuk.co.uk';
 
   const params = new URLSearchParams(location.search);
-  const FCCID = params.get('FCCID') || params.get('fccid') || '';
+  const FCCID = (params.get('FCCID') || params.get('fccid') || '').trim();
+  // FCCIDs are always UUIDs; must match FCCID_PATTERN in api/opt-out.php.
+  const FCCID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   const $ = (id) => document.getElementById(id);
-  const embedded = window.parent !== window;
-
-  function postToParent(message) {
-    if (embedded) window.parent.postMessage(message, PARENT_ORIGIN);
-  }
-
-  // ---- Iframe auto-height -----------------------------------------------
-  // The host page listens for this and sets the iframe height, so there is no inner scrollbar.
-  function sendHeight() {
-    postToParent({ type: 'aci-optout:height', height: document.documentElement.scrollHeight });
-  }
-  new ResizeObserver(sendHeight).observe(document.body);
-  window.addEventListener('load', sendHeight);
 
   $('demo-note').hidden = !DEMO;
 
@@ -41,7 +28,7 @@
   const submitErr = $('submit-err');
   const button = $('btn-optout');
 
-  if (!FCCID) {
+  if (!FCCID_PATTERN.test(FCCID)) {
     $('view-form').hidden = true;
     $('view-nolink').hidden = false;
     return;
@@ -63,7 +50,7 @@
       body: JSON.stringify({ FCCID: FCCID, Reason: reason }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) throw Object.assign(new Error('HTTP ' + res.status), { status: res.status });
     return res.json().catch(() => ({ ok: true }));
   }
 
@@ -80,13 +67,13 @@
     return url.toString();
   }
 
-  // The redirect must move the whole host page, not just the iframe.
-  // Ask the host page to do it; if this page isn't embedded, navigate directly.
+  // Move the whole page (not just the iframe) to the I&E form. Some browsers block a
+  // cross-origin iframe from navigating the top page; the "continue" link stays on screen for that.
   function redirectTop(url) {
-    if (embedded) {
-      postToParent({ type: 'aci-optout:redirect', url: url });
-    } else {
-      location.href = url;
+    try {
+      window.top.location.href = url;
+    } catch (err) {
+      // Blocked: the customer can use the link instead.
     }
   }
 
@@ -120,7 +107,9 @@
     } catch (err) {
       button.disabled = false;
       button.textContent = 'Opt out';
-      submitErr.textContent = "We couldn't save your choice. Please try again or contact us.";
+      submitErr.textContent = err.status === 429
+        ? 'Too many attempts. Please wait a few minutes and try again, or contact us.'
+        : "We couldn't save your choice. Please try again or contact us.";
       submitErr.hidden = false;
     }
   });

@@ -1,8 +1,0 @@
-{
-  "IsEncrypted": false,
-  "Values": {
-    "FUNCTIONS_WORKER_RUNTIME": "node",
-    "OPTOUT_API_URL": "https://droogmediadev.azurewebsites.net/api/OptOut",
-    "OPTOUT_API_KEY": ""
-  }
-}
