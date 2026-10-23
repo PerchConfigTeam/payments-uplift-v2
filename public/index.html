@@ -6,64 +6,66 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="strict-origin">
   <title>Opt Out of Your Payment Change | ACI</title>
+  <!-- Test page only: the live ACI theme already loads these fonts. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/aci.css">
-  <!-- Links open in the host page, not inside the iframe -->
-  <base target="_top">
 </head>
 <body>
 
-<main class="embed">
-  <p class="notice demo-note" id="demo-note" role="note" hidden>Demo mode: no choices are saved.</p>
+<!-- ===== Copy from here into the page ===== -->
+<!-- data-api: the PHP proxy's URL (a full https:// URL if it's on another site) -->
+<div class="aci-optout" data-api="/api/opt-out.php">
+  <p class="optout-notice optout-demo-note" id="optout-demo-note" role="note" hidden>Demo mode: no choices are saved.</p>
 
   <!-- Opt-out form -->
-  <section class="card" id="view-form" aria-labelledby="form-title">
-    <h3 id="form-title">Opt out of the payment change</h3>
+  <section class="optout-card" id="optout-view-form" aria-labelledby="optout-form-title">
+    <h3 id="optout-form-title">Opt out of the payment change</h3>
     <p>Choose a reason below and press OPT OUT. This will remove you from the payment amount change.</p>
 
     <form class="aci-form1" id="optout-form" novalidate>
       <label for="optout-reason">
         <span class="label-text">Opt out reason <span class="ff-req" aria-hidden="true">*</span></span>
-        <span class="ff-info" id="reason-hint">What is the reason you wish to opt out?</span>
-        <select id="optout-reason" name="reason" required aria-describedby="reason-hint reason-err">
+        <span class="ff-info" id="optout-reason-hint">What is the reason you wish to opt out?</span>
+        <select id="optout-reason" name="reason" required aria-describedby="optout-reason-hint optout-reason-err">
           <option value="" selected disabled>Please select a reason</option>
           <option value="cantAffordShortTerm">Can't afford short term</option>
           <option value="cantAffordLongTerm">Can't afford long term</option>
           <option value="keepCurrentArrangement">Prefer to keep current arrangement/don't want to change</option>
         </select>
-        <span class="form-error-msg" id="reason-err" role="alert" hidden>Please select a reason before opting out.</span>
+        <span class="form-error-msg" id="optout-reason-err" role="alert" hidden>Please select a reason before opting out.</span>
       </label>
 
-      <div class="notice">
+      <div class="optout-notice">
         <strong>Please note:</strong> when you opt out you will be redirected to an Income &amp; Expenditure form so we can make sure your payment is affordable.
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="tyButton" id="btn-optout">Opt out</button>
+        <button type="submit" class="tyButton" id="optout-submit">Opt out</button>
       </div>
-      <p class="form-error-msg" id="submit-err" role="alert" hidden></p>
+      <p class="form-error-msg" id="optout-submit-err" role="alert" hidden></p>
     </form>
   </section>
 
   <!-- Shown when the link has no account ID -->
-  <section class="card" id="view-nolink" hidden>
+  <section class="optout-card" id="optout-view-nolink" hidden>
     <h3>We couldn't find your account</h3>
     <p>Please use the link from the message we sent you, or <a href="https://www.aciuk.co.uk/contact-us">contact us</a> and we'll help.</p>
   </section>
 
   <!-- Confirmation -->
-  <section class="card" id="view-done" aria-live="polite" hidden>
-    <h3 tabindex="-1" id="done-title">You've opted out</h3>
+  <section class="optout-card" id="optout-view-done" aria-live="polite" hidden>
+    <h3 tabindex="-1" id="optout-done-title">You've opted out</h3>
     <p>We've recorded your choice and your payment amount won't change.</p>
-    <p id="redirect-msg" hidden>Taking you to the Income &amp; Expenditure form&hellip;
-      If nothing happens, <a id="redirect-link" href="#">continue to the form</a>.</p>
+    <p id="optout-redirect-msg" hidden>Taking you to the Income &amp; Expenditure form&hellip;
+      If nothing happens, <a id="optout-redirect-link" href="#">continue to the form</a>.</p>
   </section>
 
-  <p class="after-card">If your circumstances have changed and you're struggling to pay, please <a href="https://www.aciuk.co.uk/contact-us">contact us</a> and we'll find an amount that works for you.</p>
-</main>
+  <p>If your circumstances have changed and you're struggling to pay, please <a href="https://www.aciuk.co.uk/contact-us">contact us</a> and we'll find an amount that works for you.</p>
+</div>
+<!-- ===== Copy to here ===== -->
 
-<script src="js/opt-out.js"></script>
+<script src="js/opt-out.js" defer></script>
 </body>
 </html>

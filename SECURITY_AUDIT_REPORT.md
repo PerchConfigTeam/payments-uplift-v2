@@ -1,6 +1,6 @@
 # 🔐 Security Audit Report
 
-**Project:** payments-uplift-v2 (ACI Payment Opt-Out embeddable form)
+**Project:** payments-uplift-v2 (ACI Payment Opt-Out form)
 **Audit Date:** 2026-10-22
 **Auditor:** Claude Security Audit Skill
 **Scope:** `public/index.html`, `public/js/opt-out.js`, `public/css/aci.css`, `public/api/opt-out.php`, `public/.htaccess`, `optout-config.example.php`, `optout-config.php` (local, git-ignored), `.gitignore`, git history (2 commits). The untracked `dist/` folder (an old build) was reviewed but not changed.
@@ -15,13 +15,15 @@
 | 🔴 Critical | 0 | 0 | 0 | 0 |
 | 🟠 High | 1 | 0 | 1 | 0 |
 | 🟡 Medium | 2 | 2 | 0 | 0 |
-| 🔵 Low | 9 | 5 | 1 | 3 |
+| 🔵 Low | 9 | 6 | 1 | 2 |
 | ⚪ Info | 3 | 2 | 0 | 1 |
-| **Total** | **15** | **9** | **2** | **4** |
+| **Total** | **15** | **10** | **2** | **3** |
 
 The code is small and well structured. It has no injection, XSS, SSRF or open-redirect paths. The API key stays on the server, is git-ignored, and has never been committed. The most important remaining issue is a design question rather than a code bug: **the customer's account ID (FCCID) is the only thing needed to opt that customer out**, so anyone who learns or guesses one can act for them. Closing that needs signed links from the system that sends customers their messages, which that platform can't support, so **the business has accepted this risk** (see VULN-001). The code fixes in this audit harden the rate limiter, the trust of proxy headers, error output and response headers.
 
 **Update 2026-10-22 (after review):** VULN-001 risk accepted. VULN-011 resolved (the API's response format is fixed, so the 2xx check is correct). VULN-015 fixed (`dist/` deleted). Key rotation (VULN-012) and site-wide HSTS (VULN-009) are scheduled; they stay open until done.
+
+**Update 2026-10-23:** The form now goes straight into a page on the ACI site instead of an iframe. VULN-008 is fixed (`frame-ancestors 'none'`). VULN-010 matters more now: the `FCCID` is in the URL of a page that runs the site's analytics, so it must be excluded there. The URL parameter has since been renamed to `utm_id` so that Matomo can attribute visits to it. The business has accepted this risk (VULN-010): FCCIDs are UUIDs and can't realistically be guessed, and Matomo is only open to ACI staff.
 
 All PHP changes were syntax-checked with `php -l`. The new IP and proxy helpers passed 17 unit checks. An end-to-end run against a local test server with a fake config confirmed the origin, method, content-type, CORS, header and rate-limit behaviour. The real API was not called.
 
@@ -59,7 +61,7 @@ Partly mitigated today by the Origin check (blocks cross-site requests from brow
 1. ✅ **Done 2026-10-22:** `FCCID_PATTERN` (`public/api/opt-out.php:22`) now accepts only UUIDs, so only IDs from a space far too large to guess get through. The form also checks the format, and shows "We couldn't find your account" for a malformed link.
 2. Keep the rate limit in place and set `trusted_proxies` correctly in production (VULN-002).
 3. Watch the opt-out volume in the OptOut API or server logs, and investigate spikes or many opt-outs from one IP.
-4. Keep FCCIDs out of analytics on the host page (VULN-010), since that's the most likely place for them to leak in bulk.
+4. Limit who can view Matomo reports (VULN-010). FCCIDs are recorded there deliberately as `utm_id`, so Matomo is the most likely place for them to leak in bulk.
 
 ---
 
@@ -273,7 +275,7 @@ header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
 ```
 
 **Mitigation**
-Only same-origin scripts, styles and API calls are allowed, plus Google Fonts and the inline SVG `data:` image used by the select arrow. The page has no inline scripts or styles, so nothing breaks. If `API_OPTOUT` is pointed at another site, add that origin to `connect-src`.
+Only same-origin scripts, styles and API calls are allowed, plus Google Fonts and the inline SVG `data:` image used by the select arrow. The page has no inline scripts or styles, so nothing breaks. These headers cover the test page and the files served from this folder. The live form runs inside a WordPress page, so that site's own CSP (if any) applies there and must allow the proxy in `connect-src`.
 
 ---
 
@@ -285,13 +287,13 @@ Only same-origin scripts, styles and API calls are allowed, plus Google Fonts an
 | **Category** | Missing Security Headers |
 | **File(s)** | `public/.htaccess:9-11` |
 | **CWE** | CWE-1021 (Improper Restriction of Rendered UI Layers or Frames) |
-| **Status** | 🟰 Risk Accepted (by design: the form must be embeddable on any site) |
+| **Status** | ✅ Fixed (2026-10-23: the form is no longer framed) |
 
 **Description**
 There's no `frame-ancestors` directive, which was a deliberate choice so the form can be embedded on any site. A hostile page could frame it and trick a customer into clicking. The impact is limited because the attacker would also need the customer's FCCID, and with that they could call the API directly (VULN-001).
 
 **Mitigation**
-Once the embedding sites are known, add `frame-ancestors https://www.example.com` to the CSP in `public/.htaccess`.
+The form now goes straight into a page on the ACI site, so nothing needs to frame it. `frame-ancestors 'none'` is added to the CSP in `public/.htaccess`. Framing of the live page itself is controlled by the WordPress site's own headers.
 
 ---
 
@@ -319,15 +321,18 @@ HSTS applies to the whole hostname, so it shouldn't be set from a subfolder of a
 |-------|-------|
 | **Severity** | Low |
 | **Category** | Sensitive Data Exposure |
-| **File(s)** | `public/js/opt-out.js:15-18`, `:66` |
+| **File(s)** | `public/js/opt-out.js:24`, `:73` |
 | **CWE** | CWE-598 (Use of GET Request Method With Sensitive Query Strings) |
-| **Status** | ❌ Requires Manual Action |
+| **Status** | 🟰 Risk Accepted (2026-10-23: `utm_id` is used for Matomo attribution) |
 
 **Description**
-`?FCCID=` ends up in browser history, server access logs and analytics on the host page, and is passed on to the I&E form URL. Because of VULN-001, anyone who reads those logs can opt the customer out. The `Referrer-Policy: strict-origin` header already stops it leaking to third-party sites through referrers.
+`?utm_id=` (the FCCID) ends up in browser history, server access logs and the analytics on the ACI page that contains the form, and is passed on to the I&E form URL. Because of VULN-001, anyone who reads those logs can opt the customer out. The `Referrer-Policy: strict-origin` header already stops it leaking to third-party sites through referrers.
 
 **Mitigation**
-Signed, expiring links (VULN-001) make a leaked ID harmless after it expires. Also exclude the `FCCID` parameter from analytics on any page that embeds the form.
+Signed, expiring links (VULN-001) would make a leaked ID harmless after it expires.
+
+**Risk acceptance (2026-10-23)**
+The FCCID is carried as `utm_id` on purpose, so that Matomo can attribute visits to it, and Matomo stores it as the campaign ID. The business accepts the risk on the grounds that FCCIDs are random UUIDs, which can't realistically be guessed. The remaining exposure is people who can read Matomo reports or server logs, so access to those should be limited to staff who need it. This reasoning holds only while FCCIDs are random (v4) UUIDs, not time-based (v1) ones.
 
 ---
 
@@ -465,16 +470,16 @@ Delete `dist/` locally, and upload only `public/`.
 | X-Robots-Tag | ✅ | n/a |
 | Cache-Control | n/a | ✅ `no-store` |
 | Strict-Transport-Security | ⏳ Host to enable site-wide (VULN-009) | ⏳ Same |
-| frame-ancestors / X-Frame-Options | ❌ Deliberately open (VULN-008) | ✅ `'none'` |
+| frame-ancestors / X-Frame-Options | ✅ `'none'` (VULN-008) | ✅ `'none'` |
 
 `.htaccess` only applies on Apache with `mod_headers`. On nginx, copy these headers into the server block.
 
 ## Recommendations
 
-1. **Compensating controls for the accepted risk (VULN-001):** opt-out volume monitoring, and FCCIDs kept out of analytics. UUID-only validation is done.
+1. **Compensating controls for the accepted risk (VULN-001):** opt-out volume monitoring, and limited access to Matomo, which records FCCIDs (VULN-010). UUID-only validation is done.
 2. **Set `trusted_proxies`** if the production site is behind Cloudflare, Sucuri or a host load balancer (VULN-002).
 3. **Rotate the dev function key** and use a separate production key (VULN-012).
-4. **Restrict `frame-ancestors`** once the embedding sites are known (VULN-008), and ask the host to enable HSTS (VULN-009).
+4. **Ask the host to enable HSTS** site-wide (VULN-009).
 5. **Before go-live:** point `api_url` at production, and keep `optout-config.php` outside the web root (or use `OPTOUT_CONFIG`).
 6. **Test on the real host** to confirm the headers are sent, `Options -Indexes` is allowed in `.htaccess`, and the temp directory is writable (otherwise the rate limiter quietly turns itself off and logs a warning).
 

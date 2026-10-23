@@ -1,10 +1,11 @@
 /*
- * ACI theme for the embeddable opt-out form (loaded inside an iframe).
+ * ACI theme for the opt-out form, placed directly in a page on the ACI site.
  * Values copied from https://www.aciuk.co.uk/wp-content/themes/aci/style.css?v=2.11
- * Breakpoints are the live theme's mobile one (660px), measured against the iframe width.
+ * Breakpoints are the live theme's mobile one (660px).
+ * Every rule is scoped to .aci-optout so nothing here changes the rest of the page.
  */
 
-:root {
+.aci-optout {
   /* Colour */
   --aci-blue: #2195dc;        /* links, buttons */
   --aci-blue-bright: #0096dc; /* card headings */
@@ -28,13 +29,13 @@
 
 /* ---------- Base ---------- */
 
-*, *::before, *::after { box-sizing: border-box; }
+.aci-optout,
+.aci-optout *, .aci-optout *::before, .aci-optout *::after { box-sizing: border-box; }
 
-html, body { margin: 0; padding: 0; }
-
-body {
+.aci-optout {
+  max-width: 720px;
+  margin: 0 auto;
   color: var(--aci-black);
-  background-color: transparent; /* blend into the host page */
   font-family: var(--aci-font-body);
   font-weight: 400;
   font-size: 16px;
@@ -43,57 +44,51 @@ body {
 }
 
 @media screen and (max-width: 659px) {
-  body { font-size: 15px; }
+  .aci-optout { font-size: 15px; }
 }
 
-h1, h2, h3, h4, p { margin: 0; }
+.aci-optout h3, .aci-optout p { margin: 0; }
 
-a:link, a:visited, a:active, a:hover { color: var(--aci-blue); }
+.aci-optout a:link, .aci-optout a:visited, .aci-optout a:active, .aci-optout a:hover { color: var(--aci-blue); }
 
 /* The live theme removes focus outlines; we keep a visible one for keyboard users. */
-:focus-visible { outline: 3px solid var(--aci-blue); outline-offset: 2px; }
-[tabindex="-1"]:focus { outline: none; } /* headings focused by script for screen readers */
+.aci-optout :focus-visible { outline: 3px solid var(--aci-blue); outline-offset: 2px; }
+.aci-optout [tabindex="-1"]:focus { outline: none; } /* headings focused by script for screen readers */
 
 /* ---------- Layout ---------- */
 
-/* Padding leaves room for the card shadow so the iframe edge doesn't clip it. */
-.embed { max-width: 720px; margin: 0 auto; padding: 30px; }
-.embed > * + * { margin-top: 30px; }
-.embed h3 {
+.aci-optout > * + * { margin-top: 30px; }
+.aci-optout h3 {
   font-family: var(--aci-font-head);
   font-weight: 600;
   font-size: 1.6em;
   line-height: 120%;
   margin: 0 0 20px;
 }
-.embed p + p { margin-top: 1em; }
-
-@media screen and (max-width: 659px) {
-  .embed { padding: 20px 15px; }
-}
+.aci-optout p + p { margin-top: 1em; }
 
 /* White card: same treatment as .paymentCarousel .item / .checker on the live site */
-.card {
+.aci-optout .optout-card {
   background-color: var(--aci-white);
   border-radius: var(--aci-radius);
   box-shadow: var(--aci-shadow);
   padding: 40px;
 }
-.card h3 { color: var(--aci-blue-bright); }
-@media screen and (max-width: 659px) { .card { padding: 25px 20px; } }
+.aci-optout .optout-card h3 { color: var(--aci-blue-bright); }
+@media screen and (max-width: 659px) { .aci-optout .optout-card { padding: 25px 20px; } }
 
 /* Pale blue panel: same treatment as .comment on the live site */
-.notice {
+.aci-optout .optout-notice {
   background-color: var(--aci-sky);
   border-radius: var(--aci-radius);
   padding: 20px;
   margin: 0 0 30px;
 }
-.demo-note { margin: 0; text-align: center; }
+.aci-optout .optout-demo-note { margin: 0; text-align: center; }
 
 /* ---------- Buttons ---------- */
 
-.tyButton {
+.aci-optout .tyButton {
   display: inline-block;
   border-radius: var(--aci-radius);
   font-family: var(--aci-font-body);
@@ -105,25 +100,25 @@ a:link, a:visited, a:active, a:hover { color: var(--aci-blue); }
   cursor: pointer;
   transition: 0.3s;
 }
-a.tyButton:link, a.tyButton:visited, button.tyButton {
+.aci-optout button.tyButton {
   background-color: transparent;
   color: var(--aci-blue);
   border: 2px solid var(--aci-blue);
   padding: 13px 20px 11px;
 }
-a.tyButton:hover, button.tyButton:hover { background-color: var(--aci-blue); color: var(--aci-white); }
+.aci-optout button.tyButton:hover { background-color: var(--aci-blue); color: var(--aci-white); }
 
-button.tyButton:disabled { background-color: var(--aci-border); border-color: var(--aci-border); color: var(--aci-white); cursor: wait; }
+.aci-optout button.tyButton:disabled { background-color: var(--aci-border); border-color: var(--aci-border); color: var(--aci-white); cursor: wait; }
 
 /* ---------- Forms (mirrors .aci-form1) ---------- */
 
-.aci-form1 { margin: 30px 0 20px; }
-.aci-form1 label { display: block; margin: 0 0 20px; }
-.aci-form1 .label-text { display: block; font-weight: 700; margin: 0 0 4px; }
-.aci-form1 .ff-req { color: #ff0000; }
-.aci-form1 .ff-info { display: block; margin: 0 0 8px; font-size: 14px; }
+.aci-optout .aci-form1 { margin: 30px 0 20px; }
+.aci-optout .aci-form1 label { display: block; margin: 0 0 20px; }
+.aci-optout .aci-form1 .label-text { display: block; font-weight: 700; margin: 0 0 4px; }
+.aci-optout .aci-form1 .ff-req { color: #ff0000; }
+.aci-optout .aci-form1 .ff-info { display: block; margin: 0 0 8px; font-size: 14px; }
 
-.aci-form1 select {
+.aci-optout .aci-form1 select {
   font-family: var(--aci-font-head);
   font-weight: 600;
   font-size: 16px;
@@ -142,18 +137,18 @@ button.tyButton:disabled { background-color: var(--aci-border); border-color: va
   box-shadow: var(--aci-shadow-field);
   cursor: pointer;
 }
-.aci-form1 select:focus { border-color: var(--aci-border-focus); }
-.aci-form1 select.form-error { border-color: var(--aci-error); }
-.aci-form1 .form-error-msg {
+.aci-optout .aci-form1 select:focus { border-color: var(--aci-border-focus); }
+.aci-optout .aci-form1 select.form-error { border-color: var(--aci-error); }
+.aci-optout .aci-form1 .form-error-msg {
   display: block; margin: 6px 0 0; color: var(--aci-error); font-weight: 700; font-size: 0.8em;
 }
-.aci-form1 .form-actions { display: flex; justify-content: flex-end; }
+.aci-optout .aci-form1 .form-actions { display: flex; justify-content: flex-end; }
 
 @media screen and (max-width: 659px) {
-  .aci-form1 .ff-info { font-size: 12px; }
-  .aci-form1 .form-actions .tyButton { width: 100%; }
+  .aci-optout .aci-form1 .ff-info { font-size: 12px; }
+  .aci-optout .aci-form1 .form-actions .tyButton { width: 100%; }
 }
 
 /* ---------- Utilities ---------- */
 
-[hidden] { display: none !important; }
+.aci-optout [hidden] { display: none !important; }
