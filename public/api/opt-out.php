@@ -17,7 +17,7 @@ declare(strict_types=1);
 ini_set('display_errors', '0');
 
 // Must match the <option> values in index.html.
-const ALLOWED_REASONS = ['cantAffordShortTerm', 'cantAffordLongTerm', 'keepCurrentArrangement'];
+const ALLOWED_REASONS = ['cantAffordShortTerm', 'cantAffordMediumTerm', 'uncertain'];
 // FCCIDs are always UUIDs (any version, either case).
 const FCCID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
 const MAX_BODY_BYTES = 2048;

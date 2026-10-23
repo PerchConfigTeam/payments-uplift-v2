@@ -24,15 +24,15 @@
     <h3 id="optout-form-title">Opt out of the payment change</h3>
     <p>Choose a reason below and press OPT OUT. This will remove you from the payment amount change.</p>
 
-    <form class="aci-form1" id="optout-form" novalidate>
+    <form class="aci-form1" id="optout-form" autocomplete="off" novalidate>
       <label for="optout-reason">
         <span class="label-text">Opt out reason <span class="ff-req" aria-hidden="true">*</span></span>
-        <span class="ff-info" id="optout-reason-hint">What is the reason you wish to opt out?</span>
+        <span class="ff-info" id="optout-reason-hint">You've chosen not to increase your payments. If this is becuase higher payments would be unaffordable, how long do you expect this to last?</span>
         <select id="optout-reason" name="reason" required aria-describedby="optout-reason-hint optout-reason-err">
           <option value="" selected disabled>Please select a reason</option>
-          <option value="cantAffordShortTerm">Can't afford short term</option>
-          <option value="cantAffordLongTerm">Can't afford long term</option>
-          <option value="keepCurrentArrangement">Prefer to keep current arrangement/don't want to change</option>
+          <option value="cantAffordShortTerm">Short term: I can’t afford higher payments now, but expect my circumstances to improve within 3 months.</option>
+          <option value="cantAffordMediumTerm">Medium term: I expect to have difficulty affording higher payments for the next 3–12.</option>
+          <option value="uncertain">Long term or uncertain: I expect this to last longer than 12 months, or I don’t know when my circumstances will improve.</option>
         </select>
         <span class="form-error-msg" id="optout-reason-err" role="alert" hidden>Please select a reason before opting out.</span>
       </label>
