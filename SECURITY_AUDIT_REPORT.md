@@ -15,15 +15,17 @@
 | 🔴 Critical | 0 | 0 | 0 | 0 |
 | 🟠 High | 1 | 0 | 1 | 0 |
 | 🟡 Medium | 2 | 2 | 0 | 0 |
-| 🔵 Low | 9 | 6 | 1 | 2 |
+| 🔵 Low | 9 | 7 | 1 | 1 |
 | ⚪ Info | 3 | 2 | 0 | 1 |
-| **Total** | **15** | **10** | **2** | **3** |
+| **Total** | **15** | **11** | **2** | **2** |
 
 The code is small and well structured. It has no injection, XSS, SSRF or open-redirect paths. The API key stays on the server, is git-ignored, and has never been committed. The most important remaining issue is a design question rather than a code bug: **the customer's account ID (FCCID) is the only thing needed to opt that customer out**, so anyone who learns or guesses one can act for them. Closing that needs signed links from the system that sends customers their messages, which that platform can't support, so **the business has accepted this risk** (see VULN-001). The code fixes in this audit harden the rate limiter, the trust of proxy headers, error output and response headers.
 
 **Update 2026-10-22 (after review):** VULN-001 risk accepted. VULN-011 resolved (the API's response format is fixed, so the 2xx check is correct). VULN-015 fixed (`dist/` deleted). Key rotation (VULN-012) and site-wide HSTS (VULN-009) are scheduled; they stay open until done.
 
 **Update 2026-10-23:** The form now goes straight into a page on the ACI site instead of an iframe. VULN-008 is fixed (`frame-ancestors 'none'`). VULN-010 matters more now: the `FCCID` is in the URL of a page that runs the site's analytics, so it must be excluded there. The URL parameter has since been renamed to `utm_id` so that Matomo can attribute visits to it. The business has accepted this risk (VULN-010): FCCIDs are UUIDs and can't realistically be guessed, and Matomo is only open to ACI staff.
+
+**Update 2026-10-26:** VULN-009 fixed: HSTS is now enabled site-wide on the WordPress site.
 
 All PHP changes were syntax-checked with `php -l`. The new IP and proxy helpers passed 17 unit checks. An end-to-end run against a local test server with a fake config confirmed the origin, method, content-type, CORS, header and rate-limit behaviour. The real API was not called.
 
@@ -305,7 +307,7 @@ The form now goes straight into a page on the ACI site, so nothing needs to fram
 | **Category** | Cryptographic Failures (A02) |
 | **File(s)** | `public/.htaccess` |
 | **CWE** | CWE-319 (Cleartext Transmission of Sensitive Information) |
-| **Status** | ❌ Requires Manual Action (host to enable HSTS; scheduled) |
+| **Status** | ✅ Fixed (2026-10-26: HSTS enabled site-wide on the WordPress site) |
 
 **Description**
 Without `Strict-Transport-Security`, a customer's first visit could be downgraded to HTTP by someone on their network. The proxy refuses plain-HTTP submissions, but the page itself could still be served over HTTP.
@@ -469,7 +471,7 @@ Delete `dist/` locally, and upload only `public/`.
 | Permissions-Policy | ✅ Added | n/a |
 | X-Robots-Tag | ✅ | n/a |
 | Cache-Control | n/a | ✅ `no-store` |
-| Strict-Transport-Security | ⏳ Host to enable site-wide (VULN-009) | ⏳ Same |
+| Strict-Transport-Security | ✅ Enabled site-wide by the host (VULN-009) | ✅ Same |
 | frame-ancestors / X-Frame-Options | ✅ `'none'` (VULN-008) | ✅ `'none'` |
 
 `.htaccess` only applies on Apache with `mod_headers`. On nginx, copy these headers into the server block.
@@ -479,9 +481,8 @@ Delete `dist/` locally, and upload only `public/`.
 1. **Compensating controls for the accepted risk (VULN-001):** opt-out volume monitoring, and limited access to Matomo, which records FCCIDs (VULN-010). UUID-only validation is done.
 2. **Set `trusted_proxies`** if the production site is behind Cloudflare, Sucuri or a host load balancer (VULN-002).
 3. **Rotate the dev function key** and use a separate production key (VULN-012).
-4. **Ask the host to enable HSTS** site-wide (VULN-009).
-5. **Before go-live:** point `api_url` at production, and keep `optout-config.php` outside the web root (or use `OPTOUT_CONFIG`).
-6. **Test on the real host** to confirm the headers are sent, `Options -Indexes` is allowed in `.htaccess`, and the temp directory is writable (otherwise the rate limiter quietly turns itself off and logs a warning).
+4. **Before go-live:** point `api_url` at production, and keep `optout-config.php` outside the web root (or use `OPTOUT_CONFIG`).
+5. **Test on the real host** to confirm the headers are sent, `Options -Indexes` is allowed in `.htaccess`, and the temp directory is writable (otherwise the rate limiter quietly turns itself off and logs a warning).
 
 ## References
 

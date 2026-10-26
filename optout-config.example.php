@@ -13,7 +13,7 @@ return [
     'allowed_origins' => [],
 
     // Opt-out attempts allowed per IP address in each window.
-    'rate_limit_max' => 10,
+    'rate_limit_max' => 30,
     'rate_limit_window_s' => 600,
 
     // If a CDN or proxy sits in front of the site, list its IPs/ranges here so the rate limit and

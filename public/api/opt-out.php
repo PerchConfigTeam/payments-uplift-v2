@@ -22,6 +22,9 @@ const ALLOWED_REASONS = ['cantAffordShortTerm', 'cantAffordMediumTerm', 'uncerta
 const FCCID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
 const MAX_BODY_BYTES = 2048;
 const UPSTREAM_TIMEOUT_S = 10;
+// When the API says it's busy (429/503): how long the browser is told to wait, if the API doesn't say.
+const BUSY_RETRY_AFTER_S = 60;
+const MAX_BUSY_RETRY_AFTER_S = 300;
 
 function respond(int $status, array $body, array $headers = []): void
 {
@@ -51,7 +54,8 @@ function load_config(): array
         'api_key' => getenv('OPTOUT_API_KEY') ?: (string) ($config['api_key'] ?? ''),
         // Other origins allowed to call this script (CORS). This site's own origin is always allowed.
         'allowed_origins' => (array) ($config['allowed_origins'] ?? []),
-        'rate_limit_max' => (int) ($config['rate_limit_max'] ?? 10),
+        // Generous enough for many customers sharing one mobile-network IP address.
+        'rate_limit_max' => (int) ($config['rate_limit_max'] ?? 30),
         'rate_limit_window_s' => (int) ($config['rate_limit_window_s'] ?? 600),
         // Proxies/CDNs in front of this server (IPs or CIDR ranges). Forwarded headers are only
         // believed when the request comes directly from one of these.
@@ -244,6 +248,7 @@ if (!in_array($reason, ALLOWED_REASONS, true)) {
 }
 
 // ---- Forward -------------------------------------------------------------
+$upstreamRetryAfter = null;
 $ch = curl_init($apiUrl);
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
@@ -254,6 +259,13 @@ curl_setopt_array($ch, [
         'x-functions-key: ' . $apiKey,
     ],
     CURLOPT_RETURNTRANSFER => true,
+    // Only Retry-After (in seconds) is read from the API's headers.
+    CURLOPT_HEADERFUNCTION => function ($ch, string $line) use (&$upstreamRetryAfter): int {
+        if (preg_match('/^Retry-After:\s*(\d+)\s*$/i', $line, $m)) {
+            $upstreamRetryAfter = (int) $m[1];
+        }
+        return strlen($line);
+    },
     CURLOPT_FOLLOWLOCATION => false,
     CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_TIMEOUT => UPSTREAM_TIMEOUT_S,
@@ -268,6 +280,15 @@ curl_close($ch);
 if ($response === false) {
     error_log('opt-out: upstream request failed: ' . $curlError);
     respond(502, ['ok' => false, 'error' => 'upstream_unreachable'], $corsHeaders);
+}
+if ($status === 429 || $status === 503) {
+    // The API is overloaded: tell the browser to try again later rather than reporting a failure.
+    error_log('opt-out: upstream busy, HTTP ' . $status);
+    $retryAfter = $upstreamRetryAfter === null
+        ? BUSY_RETRY_AFTER_S
+        : max(1, min(MAX_BUSY_RETRY_AFTER_S, $upstreamRetryAfter));
+    respond(503, ['ok' => false, 'error' => 'upstream_busy'],
+        array_merge($corsHeaders, ['Retry-After: ' . $retryAfter]));
 }
 if ($status < 200 || $status >= 300) {
     // Status only: the upstream body may contain customer details.

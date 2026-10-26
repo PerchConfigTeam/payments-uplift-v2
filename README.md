@@ -16,11 +16,12 @@ A browser can't hold a secret, so the payload's protection comes from the proxy 
 - `Origin` must be this site, or one listed in `allowed_origins`, which blocks other sites posting on a customer's behalf
 - POST, `application/json`, at most 2 KB
 - `FCCID` must be a UUID (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`, hex, any case); `Reason` must be one of the allowed values
-- Rate limit per IP address, or per /64 for IPv6 (default 10 attempts per 10 minutes, then HTTP 429)
+- Rate limit per IP address, or per /64 for IPv6 (default 30 attempts per 10 minutes, then HTTP 429). The limit allows for many customers sharing one mobile-network IP address
 - Forwarded headers (`X-Forwarded-For`, `X-Forwarded-Proto`) are only believed from proxies listed in `trusted_proxies`
 - PHP errors are never shown to the browser, and responses carry restrictive security headers
 - The key is added on the server, sent to the API over verified TLS, and never returned or logged
 - Errors from the API are logged by status code only; the browser gets a generic failure
+- If the API says it's busy (HTTP 429 or 503), the browser gets HTTP 503 `upstream_busy` with a `Retry-After` (the API's own value in seconds, capped at 5 minutes, otherwise 60), and the form asks the customer to try again in a minute
 
 ## Deploy
 
@@ -48,6 +49,7 @@ Open http://localhost:8080/?utm_id=<test account id>. Submitting calls the real 
 - `public/index.html`: standalone test page containing the form block to paste into the live page (reason picker, confirmation, "no account" message)
 - `public/css/aci.css`: ACI theme tokens and form components
 - `public/js/opt-out.js`: validation, submit and redirect
+- `tests/`: automated tests (see Tests)
 - `public/api/opt-out.php`: the proxy; checks the request, adds the key, forwards to the API
 - `public/.htaccess`: security headers (including a Content-Security-Policy) and no directory listings (Apache)
 - `optout-config.example.php`: template for the proxy settings (keep the real one outside the web root)
@@ -77,7 +79,7 @@ On the page, `data-api` on `.aci-optout`: the proxy; `POST { FCCID, Reason }`. D
 |---|---|---|
 | `DEMO` | `false` | When `true`, no network calls; submitting always succeeds; shows a "Demo mode" note |
 | `IE_FORM_URL` | `https://www.aciuk.co.uk/form-dd-ie` | Redirect target after opt-out (`FCCID` is appended); set to `null` to stay on the confirmation |
-| `REDIRECT_DELAY_MS` | `2500` | How long the confirmation shows before redirecting |
+| `REDIRECT_DELAY_MS` | `5000` | How long the confirmation shows before redirecting |
 | `REQUEST_TIMEOUT_MS` | `15000` | How long to wait for the API before showing an error |
 
 `optout-config.php` (or environment variables):
@@ -87,11 +89,25 @@ On the page, `data-api` on `.aci-optout`: the proxy; `POST { FCCID, Reason }`. D
 | `api_url` | `OPTOUT_API_URL` | OptOut API URL, must be `https://` (currently the dev instance) |
 | `api_key` | `OPTOUT_API_KEY` | `x-functions-key` |
 | `allowed_origins` | | Other sites allowed to call the proxy from the browser |
-| `rate_limit_max` / `rate_limit_window_s` | | Attempts allowed per IP per window (default 10 per 600s) |
+| `rate_limit_max` / `rate_limit_window_s` | | Attempts allowed per IP per window (default 30 per 600s) |
 | `trusted_proxies` | | IPs or CIDR ranges of a CDN/proxy in front of the site; forwarded headers are only trusted from these |
 | `client_ip_header` | | Where the trusted proxy puts the real client IP (default `HTTP_X_FORWARDED_FOR`; Cloudflare: `HTTP_CF_CONNECTING_IP`) |
 
 Accepted reasons are listed in `ALLOWED_REASONS` in `public/api/opt-out.php` and must match the `<option>` values in the form.
+
+## Tests
+
+Needs Node 20+, PHP (with `curl`) and `openssl` on the PATH.
+
+```
+npm install
+npm test            # everything
+npm run test:php    # the PHP proxy only
+npm run test:js     # the browser script only
+```
+
+- `tests/proxy.test.mjs` runs `api/opt-out.php` under `php -S` against a local HTTPS stand-in for the OptOut API (self-signed certificate generated per run). It covers origin/CORS, HTTPS and trusted-proxy handling, payload validation, rate limiting, upstream failures and that the key and upstream body never reach the browser. No real API is called.
+- `tests/opt-out.test.mjs` loads `index.html` and `opt-out.js` in jsdom with `fetch` stubbed: the account-link check, reason validation, submit, error messages and the redirect to the I&E form. It also checks the reasons and FCCID pattern match between the form and the proxy.
 
 ## Before going live
 

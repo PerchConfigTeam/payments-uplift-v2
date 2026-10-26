@@ -1,0 +1,13 @@
+{
+  "name": "aci-payment-opt-out",
+  "private": true,
+  "description": "ACI payment opt-out form and PHP proxy",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "test:php": "node --test tests/proxy.test.mjs",
+    "test:js": "node --test tests/opt-out.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}

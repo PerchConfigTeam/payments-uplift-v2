@@ -8,7 +8,7 @@
   const DEFAULT_API_OPTOUT = '/api/opt-out.php'; // POST { FCCID, Reason }
   // While DEMO is true no network calls are made.
   const DEMO = false;
-  const REDIRECT_DELAY_MS = 2500;
+  const REDIRECT_DELAY_MS = 5000;
   const REQUEST_TIMEOUT_MS = 15000;
   // Existing ACI Income & Expenditure (Budget Calculator) form. Set to null to skip the redirect.
   const IE_FORM_URL = 'https://www.aciuk.co.uk/form-dd-ie';
@@ -107,7 +107,9 @@
         button.textContent = 'Opt out';
         submitErr.textContent = err.status === 429
           ? 'Too many attempts. Please wait a few minutes and try again, or contact us.'
-          : "We couldn't save your choice. Please try again or contact us.";
+          : err.status === 503
+            ? "We're very busy right now. Please wait a minute and try again, or contact us."
+            : "We couldn't save your choice. Please try again or contact us.";
         submitErr.hidden = false;
       }
     });
