@@ -21,7 +21,7 @@ A browser can't hold a secret, so the payload's protection comes from the proxy 
 - PHP errors are never shown to the browser, and responses carry restrictive security headers
 - The key is added on the server, sent to the API over verified TLS, and never returned or logged
 - Errors from the API are logged by status code only; the browser gets a generic failure
-- If the API says it's busy (HTTP 429 or 503), the browser gets HTTP 503 `upstream_busy` with a `Retry-After` (the API's own value in seconds, capped at 5 minutes, otherwise 60), and the form asks the customer to try again in a minute
+- If the API says it's busy (HTTP 429 or 503), the browser gets HTTP 503 `upstream_busy` with a `Retry-After` (the API's own value in seconds, capped at 5 minutes, otherwise 60), and the form counts down 20 seconds and tries again (the customer can cancel)
 
 ## Deploy
 
@@ -44,9 +44,12 @@ php -S localhost:8080 -t public
 
 Open http://localhost:8080/?utm_id=<test account id>. Submitting calls the real API.
 
+To see how the form handles each API response (saved, timeouts, errors, rate limit, busy countdown, already opted out, no account ID) without calling the API, open http://localhost:8080/preview.html and pick a response from the panel. The panel can be hidden for screenshots, and H brings it back. No config file is needed for this.
+
 ## Files
 
 - `public/index.html`: standalone test page containing the form block to paste into the live page (reason picker, confirmation, "no account" message)
+- `public/preview.html`: local preview of the form with the API faked, for checking and screenshotting each response; doesn't need to go live
 - `public/css/aci.css`: ACI theme tokens and form components
 - `public/js/opt-out.js`: validation, submit and redirect
 - `tests/`: automated tests (see Tests)
@@ -78,9 +81,13 @@ On the page, `data-api` on `.aci-optout`: the proxy; `POST { FCCID, Reason }`. D
 | Setting | Default | Purpose |
 |---|---|---|
 | `DEMO` | `false` | When `true`, no network calls; submitting always succeeds; shows a "Demo mode" note |
-| `IE_FORM_URL` | `https://www.aciuk.co.uk/form-dd-ie` | Redirect target after opt-out (`FCCID` is appended); set to `null` to stay on the confirmation |
-| `REDIRECT_DELAY_MS` | `5000` | How long the confirmation shows before redirecting |
+| `IE_FORM_URL` | `https://www.aciuk.co.uk/form-dd-ie` | Redirect target after opt-out; set to `null` to stay on the confirmation. `FCCID`, `utm_id` (the FCCID), `utm_source` and `utm_term` (submission date, `YYYY-MM-DD`, customer's local time) are appended |
+| `UTM_SOURCE` | `upliftForm` | `utm_source` on the redirect, so Matomo can attribute I&E form visits to this page |
+| `REDIRECT_DELAY_MS` | `8000` | How long the confirmation shows before redirecting |
 | `REQUEST_TIMEOUT_MS` | `15000` | How long to wait for the API before showing an error |
+| `BUSY_RETRY_S` / `MAX_BUSY_RETRIES` | `20` / `3` | When the API is busy (503), count down this many seconds (with a Cancel button) and try again, up to this many times |
+
+After a successful opt-out the page remembers it in `sessionStorage` for that browser tab. If the customer comes back (Back from the I&E form, or a refresh), they see the confirmation and a link to the I&E form instead of the form, and aren't redirected again.
 
 `optout-config.php` (or environment variables):
 

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Opt-out form preview</title>
+  <!--
+    Local preview only: shows the real form (markup copied live from index.html, real CSS and JS)
+    with the API calls faked, so every response can be seen and screenshotted.
+    No request ever reaches the proxy or the API. Doesn't need to go live.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/aci.css">
+  <style>
+    body { margin: 0; padding: 40px 16px 200px; background: #f4f4f4; }
+    .pv-panel {
+      position: fixed; right: 16px; bottom: 16px; z-index: 10;
+      width: 300px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow: auto;
+      padding: 14px 16px; border-radius: 8px;
+      background: #1d2330; color: #f1f3f7; box-shadow: 0 6px 24px rgb(0 0 0 / 30%);
+      font: 13px/1.45 system-ui, sans-serif;
+    }
+    .pv-panel h2 { margin: 0 0 8px; font-size: 14px; }
+    .pv-panel ul { list-style: none; margin: 0 0 10px; padding: 0; }
+    .pv-panel li a { display: block; padding: 4px 8px; border-radius: 4px; color: inherit; text-decoration: none; }
+    .pv-panel li a:hover { background: #2e3646; }
+    .pv-panel li a[aria-current] { background: #2195dc; }
+    .pv-panel small { display: block; opacity: 0.7; }
+    .pv-panel label { display: block; margin: 4px 0; }
+    .pv-panel .pv-note { margin: 8px 0; padding: 6px 8px; border-radius: 4px; background: #2e3646; }
+    .pv-panel button { margin-top: 6px; padding: 5px 10px; border: 0; border-radius: 4px; background: #f1f3f7; color: #1d2330; font: inherit; cursor: pointer; }
+    .pv-hidden .pv-panel { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="pv-form"></div>
+
+<aside class="pv-panel" aria-label="Preview controls">
+  <h2>Fake API response</h2>
+  <ul id="pv-list"></ul>
+  <label><input type="checkbox" id="pv-hold"> Stay on the confirmation (don't redirect)</label>
+  <label><input type="checkbox" id="pv-fast"> Short busy countdown (3s, not 20s)</label>
+  <p class="pv-note" id="pv-note"></p>
+  <button type="button" id="pv-hide">Hide panel for screenshot</button>
+  <small>Press H to show it again.</small>
+</aside>
+
+<script>
+(async function () {
+  'use strict';
+
+  const TEST_FCCID = '00000000-0000-4000-8000-000000000000';
+  const STORAGE_KEY = 'aci-optout-done:' + TEST_FCCID;
+  // How long each fake response takes, matching the real timings where they matter.
+  const SAVE_MS = 1200;          // a normal save
+  const PROXY_TIMEOUT_MS = 10000; // the proxy's UPSTREAM_TIMEOUT_S, after which it returns 502
+
+  const json = (status, body, headers) => new Response(JSON.stringify(body), { status, headers });
+  const wait = (ms, signal) => new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    if (signal) signal.addEventListener('abort', () => {
+      clearTimeout(t);
+      reject(signal.reason || new DOMException('The operation was aborted.', 'AbortError'));
+    });
+  });
+
+  // Each scenario fakes what the PHP proxy (api/opt-out.php) sends back to the browser.
+  const SCENARIOS = [
+    { id: 'success', label: 'Saved (200)', note: 'Saves after about a second, shows the confirmation, then redirects to the I&E form after 8s.',
+      respond: async (n, signal) => { await wait(SAVE_MS, signal); return json(200, { ok: true }); } },
+    { id: 'slow', label: 'Slow save (8s)', note: 'Button shows "Saving…" for 8 seconds, then succeeds.',
+      respond: async (n, signal) => { await wait(8000, signal); return json(200, { ok: true }); } },
+    { id: 'proxy-timeout', label: 'API timeout (proxy gives up at 10s → 502)', note: 'The API doesn\'t answer; the proxy gives up after 10s and returns 502. Shows the generic error.',
+      respond: async (n, signal) => { await wait(PROXY_TIMEOUT_MS, signal); return json(502, { ok: false, error: 'upstream_unreachable' }); } },
+    { id: 'browser-timeout', label: 'Proxy unreachable (browser gives up at 15s)', note: 'Nothing answers at all; the browser aborts after 15s. Shows the generic error.',
+      respond: async (n, signal) => { await wait(Infinity, signal); } },
+    { id: 'offline', label: 'No connection', note: 'The request fails straight away, as when the customer is offline. Shows the generic error.',
+      respond: async () => { await wait(400); throw new TypeError('Failed to fetch'); } },
+    { id: 'upstream-error', label: 'API error (502)', note: 'The API returns an error; the proxy passes back 502. Shows the generic error.',
+      respond: async (n, signal) => { await wait(SAVE_MS, signal); return json(502, { ok: false, error: 'upstream_error' }); } },
+    { id: 'rejected', label: 'Request rejected (400)', note: 'The proxy refuses the request (bad payload). Shows the generic error.',
+      respond: async (n, signal) => { await wait(400, signal); return json(400, { ok: false, error: 'invalid_request' }); } },
+    { id: 'rate-limited', label: 'Too many attempts (429)', note: 'The proxy\'s per-visitor rate limit. Shows the "Too many attempts" error.',
+      respond: async (n, signal) => { await wait(400, signal); return json(429, { ok: false, error: 'rate_limited' }, { 'Retry-After': '600' }); } },
+    { id: 'busy-then-ok', label: 'API busy once, then saved (503)', note: 'First try is busy: shows the countdown panel, then retries and succeeds.',
+      respond: async (n, signal) => { await wait(SAVE_MS, signal); return n === 1 ? json(503, { ok: false, error: 'upstream_busy' }, { 'Retry-After': '60' }) : json(200, { ok: true }); } },
+    { id: 'busy-always', label: 'API busy every time (503)', note: 'Busy on every try: the countdown runs 3 times, then shows the "very busy" error. Tick "Short busy countdown" to get there faster. Press Cancel during a countdown to see the cancel message.',
+      respond: async (n, signal) => { await wait(SAVE_MS, signal); return json(503, { ok: false, error: 'upstream_busy' }, { 'Retry-After': '60' }); } },
+    { id: 'done', label: 'Already opted out (came back)', note: 'The customer opted out earlier in this tab and came back (Back button or refresh).' },
+    { id: 'nolink', label: 'No account ID in link', note: 'The link has no valid utm_id.' },
+  ];
+
+  const params = new URLSearchParams(location.search);
+  const scenario = SCENARIOS.find((s) => s.id === params.get('scenario')) || SCENARIOS[0];
+  const hold = params.get('hold') === '1';
+  const fast = params.get('fast') === '1';
+
+  // ---- Controls ----
+  function linkFor(id, overrides) {
+    const p = new URLSearchParams({ scenario: id });
+    if (overrides.hold) p.set('hold', '1');
+    if (overrides.fast) p.set('fast', '1');
+    if (id !== 'nolink') p.set('utm_id', TEST_FCCID);
+    return '?' + p.toString();
+  }
+  const list = document.getElementById('pv-list');
+  for (const s of SCENARIOS) {
+    const a = document.createElement('a');
+    a.href = linkFor(s.id, { hold, fast });
+    a.textContent = s.label;
+    if (s === scenario) a.setAttribute('aria-current', 'true');
+    const li = document.createElement('li');
+    li.append(a);
+    list.append(li);
+  }
+  document.getElementById('pv-note').textContent = scenario.note;
+  const holdBox = document.getElementById('pv-hold');
+  const fastBox = document.getElementById('pv-fast');
+  holdBox.checked = hold;
+  fastBox.checked = fast;
+  const reload = () => location.assign(linkFor(scenario.id, { hold: holdBox.checked, fast: fastBox.checked }));
+  holdBox.addEventListener('change', reload);
+  fastBox.addEventListener('change', reload);
+  document.getElementById('pv-hide').addEventListener('click', () => document.body.classList.add('pv-hidden'));
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'h' || e.key === 'H') && !e.target.closest('input, select, textarea')) {
+      document.body.classList.toggle('pv-hidden');
+    }
+  });
+
+  // Make sure the URL carries the test account ID the form reads (or none, for the no-link view).
+  const wantId = scenario.id === 'nolink' ? null : TEST_FCCID;
+  if (params.get('utm_id') !== wantId) {
+    history.replaceState(null, '', linkFor(scenario.id, { hold, fast }));
+  }
+
+  // ---- "Already opted out" state lives in sessionStorage: set it only for that scenario ----
+  try {
+    if (scenario.id === 'done') sessionStorage.setItem(STORAGE_KEY, new Date().toISOString().slice(0, 10));
+    else sessionStorage.removeItem(STORAGE_KEY);
+  } catch (e) { /* storage blocked: "already opted out" can't be shown */ }
+
+  // ---- The form markup, copied live from index.html so this never drifts from it ----
+  const page = await (await fetch('index.html', { cache: 'no-store' })).text();
+  const start = page.indexOf('<!-- ===== Copy from here into the page ===== -->');
+  const end = page.indexOf('<!-- ===== Copy to here ===== -->');
+  if (start < 0 || end < 0) {
+    document.getElementById('pv-form').textContent = 'Couldn\'t find the "Copy from here" / "Copy to here" markers in index.html.';
+    return;
+  }
+  document.getElementById('pv-form').innerHTML = page.slice(start, end);
+
+  // ---- The real script, with only timings changed when asked ----
+  let script = await (await fetch('js/opt-out.js', { cache: 'no-store' })).text();
+  if (hold) script = script.replace(/setTimeout\(\(\) => location\.assign\(redirectUrl\), REDIRECT_DELAY_MS\);/, '/* preview: redirect held */');
+  if (fast) script = script.replace(/const BUSY_RETRY_S = \d+;/, 'const BUSY_RETRY_S = 3;');
+
+  // ---- Fake the API: from here on, every request the form makes gets this scenario's response ----
+  const realFetch = window.fetch.bind(window);
+  let attempts = 0;
+  window.fetch = (url, init = {}) => {
+    attempts += 1;
+    console.info('[preview] request', attempts, 'to', url, init.body);
+    return scenario.respond ? scenario.respond(attempts, init.signal) : realFetch(url, init);
+  };
+
+  const el = document.createElement('script');
+  el.textContent = script;
+  document.body.append(el);
+})();
+</script>
+</body>
+</html>

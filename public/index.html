@@ -21,28 +21,33 @@
 
   <!-- Opt-out form -->
   <section class="optout-card" id="optout-view-form" aria-labelledby="optout-form-title">
-    <h3 id="optout-form-title">Opt out of the payment change</h3>
-    <p>Choose a reason below and press OPT OUT. This will remove you from the payment amount change.</p>
+    <h3 id="optout-form-title"><strong>Next steps</strong></h3>
+    <p>If the higher payment amount isn't affordable right now, we'd like to understand how long you expect this to last.</p>
 
     <form class="aci-form1" id="optout-form" autocomplete="off" novalidate>
       <label for="optout-reason">
-        <span class="label-text">Opt out reason <span class="ff-req" aria-hidden="true">*</span></span>
-        <span class="ff-info" id="optout-reason-hint">You've chosen not to increase your payments. If this is because higher payments would be unaffordable, how long do you expect this to last?</span>
+        <span class="label-text">Select the option below that best describes your situation <span class="ff-req" aria-hidden="true">*</span></span>
         <select id="optout-reason" name="reason" required aria-describedby="optout-reason-hint optout-reason-err">
           <option value="" selected disabled>Please select a reason</option>
-          <option value="cantAffordShortTerm">Short term: I can’t afford higher payments now, but expect my circumstances to improve within 3 months.</option>
-          <option value="cantAffordMediumTerm">Medium term: I expect to have difficulty affording higher payments for the next 3–12 months.</option>
-          <option value="uncertain">Long term or uncertain: I expect this to last longer than 12 months, or I don’t know when my circumstances will improve.</option>
+          <option value="cantAffordShortTerm">Short Term: I expect my circumstances to improve within 3 months</option>
+          <option value="cantAffordMediumTerm">Medium Term: I expect my circumstances to improve within 3 to 12 months</option>
+          <option value="uncertain">Long Term or Uncertain: I expect my circumstances to take more than 12 months to improve, or I’m not sure when they will</option>
         </select>
         <span class="form-error-msg" id="optout-reason-err" role="alert" hidden>Please select a reason before opting out.</span>
       </label>
 
-      <div class="optout-notice">
-        <strong>Please note:</strong> when you opt out you will be redirected to an Income &amp; Expenditure form so we can make sure your payment is affordable.
-      </div>
+            <div class="optout-notice">
+              <h4>What happens next?</h4>
+              <p>When you select <strong>submit</strong> you'll be redirected to an income & outgoings form to help us understand your financial circumstances.</p>
+            </div>
 
       <div class="form-actions">
-        <button type="submit" class="tyButton" id="optout-submit">Opt out</button>
+        <button type="submit" class="tyButton" id="optout-submit">Submit</button>
+      </div>
+      <div class="optout-notice optout-busy" id="optout-busy" role="status" hidden>
+        <p>We're very busy right now, so your choice hasn't been saved yet.</p>
+        <p>We'll try again in <span id="optout-busy-count">20</span> seconds. Please keep this page open.</p>
+        <button type="button" class="tyButton" id="optout-busy-cancel">Cancel</button>
       </div>
       <p class="form-error-msg" id="optout-submit-err" role="alert" hidden></p>
     </form>
@@ -60,9 +65,10 @@
     <p>We've recorded your choice and your payment amount won't change.</p>
     <p id="optout-redirect-msg" hidden>Taking you to the Income &amp; Expenditure form&hellip;
       If nothing happens, <a id="optout-redirect-link" href="#">continue to the form</a>.</p>
+    <p id="optout-continue-msg" hidden>If you haven't finished it yet, please <a id="optout-continue-link" href="#">complete the Income &amp; Expenditure form</a>.</p>
   </section>
 
-  <p>If your circumstances have changed and you're struggling to pay, please <a href="https://www.aciuk.co.uk/contact-us">contact us</a> and we'll find an amount that works for you.</p>
+  <p class="footer">If your circumstances have changed and you're struggling to pay, please <a href="https://www.aciuk.co.uk/contact-us">contact us</a> and we'll find an amount that works for you.</p>
 </div>
 <!-- ===== Copy to here ===== -->
 

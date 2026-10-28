@@ -47,6 +47,11 @@
   .aci-optout { font-size: 15px; }
 }
 
+.aci-optout .optout-notice h4 {
+  margin: 0 0 10px;
+}
+
+
 .aci-optout h3, .aci-optout p { margin: 0; }
 
 .aci-optout a:link, .aci-optout a:visited, .aci-optout a:active, .aci-optout a:hover { color: var(--aci-blue); }
@@ -67,6 +72,10 @@
 }
 .aci-optout p + p { margin-top: 1em; }
 
+.footer {
+  padding-top: 20px;
+}
+
 /* White card: same treatment as .paymentCarousel .item / .checker on the live site */
 .aci-optout .optout-card {
   background-color: var(--aci-white);
@@ -85,6 +94,9 @@
   margin: 0 0 30px;
 }
 .aci-optout .optout-demo-note { margin: 0; text-align: center; }
+.aci-optout .optout-busy { margin: 20px 0 0; }
+.aci-optout .optout-busy p + p { margin-top: 0.5em; }
+.aci-optout .optout-busy .tyButton { margin-top: 15px; }
 
 /* ---------- Buttons ---------- */
 
@@ -112,7 +124,7 @@
 
 /* ---------- Forms (mirrors .aci-form1) ---------- */
 
-.aci-optout .aci-form1 { margin: 30px 0 20px; }
+.aci-optout .aci-form1 { margin: 30px 0 0; }
 .aci-optout .aci-form1 label { display: block; margin: 0 0 20px; }
 .aci-optout .aci-form1 .label-text { display: block; font-weight: 700; margin: 0 0 4px; }
 .aci-optout .aci-form1 .ff-req { color: #ff0000; }
